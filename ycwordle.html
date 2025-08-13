@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YC WORDLE</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #121213;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #3a3a3c;
+            padding-bottom: 20px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: 0.2rem;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+
+        .header .subtitle {
+            font-size: 1rem;
+            color: #818384;
+            margin-bottom: 15px;
+        }
+
+        .games-container {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .game-section {
+            background: #1a1a1b;
+            border-radius: 8px;
+            padding: 30px;
+            border: 1px solid #3a3a3c;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .game-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+
+        .game-clue {
+            font-size: 1rem;
+            color: #818384;
+            font-style: italic;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-rows: repeat(6, 1fr);
+            gap: 5px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+
+        .word-row {
+            display: grid;
+            gap: 5px;
+        }
+
+        .word-row.six-letters {
+            grid-template-columns: repeat(6, 1fr);
+        }
+
+        .word-row.seven-letters {
+            grid-template-columns: repeat(7, 1fr);
+        }
+
+        .letter-box {
+            width: 62px;
+            height: 62px;
+            border: 2px solid #3a3a3c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: #121213;
+            color: #ffffff;
+            transition: all 0.2s ease;
+        }
+
+        .letter-box.filled {
+            border-color: #565758;
+            animation: pop 0.1s ease-in-out;
+        }
+
+        .letter-box.correct {
+            background: #538d4e;
+            border-color: #538d4e;
+            color: #ffffff;
+        }
+
+        .letter-box.present {
+            background: #b59f3b;
+            border-color: #b59f3b;
+            color: #ffffff;
+        }
+
+        .letter-box.absent {
+            background: #3a3a3c;
+            border-color: #3a3a3c;
+            color: #ffffff;
+        }
+
+        .letter-box.current {
+            border-color: #565758;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes flip {
+            0% { transform: rotateX(0); }
+            50% { transform: rotateX(90deg); }
+            100% { transform: rotateX(0); }
+        }
+
+        .letter-box.flip {
+            animation: flip 0.6s ease-in-out;
+        }
+
+        .keyboard {
+            width: 100%;
+            max-width: 500px;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #121213;
+            padding: 20px;
+            border-top: 1px solid #3a3a3c;
+        }
+
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .key {
+            background: #818384;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            text-transform: uppercase;
+            min-width: 43px;
+            height: 58px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .key:hover {
+            background: #9ca3af;
+        }
+
+        .key:active {
+            transform: scale(0.95);
+        }
+
+        .key.wide {
+            min-width: 65px;
+            font-size: 0.75rem;
+        }
+
+        .key.correct {
+            background: #538d4e;
+        }
+
+        .key.present {
+            background: #b59f3b;
+        }
+
+        .key.absent {
+            background: #3a3a3c;
+        }
+
+        .message {
+            position: fixed;
+            top: 100px;
+            background: #ffffff;
+            color: #121213;
+            padding: 16px 24px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            z-index: 1000;
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 23px 0 rgba(0,0,0,.2);
+        }
+
+        .message.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .game-status {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .game-status.won {
+            color: #538d4e;
+        }
+
+        .game-status.lost {
+            color: #f5793a;
+        }
+
+        .reset-btn {
+            background: #538d4e;
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.2s ease;
+        }
+
+        .reset-btn:hover {
+            background: #6aaa64;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .letter-box {
+                width: 52px;
+                height: 52px;
+                font-size: 1.5rem;
+            }
+            
+            .key {
+                min-width: 35px;
+                height: 48px;
+                font-size: 0.75rem;
+            }
+            
+            .key.wide {
+                min-width: 55px;
+            }
+
+            .game-section {
+                padding: 20px;
+            }
+
+            .keyboard {
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .letter-box {
+                width: 45px;
+                height: 45px;
+                font-size: 1.25rem;
+            }
+
+            .key {
+                min-width: 30px;
+                height: 42px;
+            }
+
+            .key.wide {
+                min-width: 50px;
+            }
+        }
+
+        .keyboard-spacer {
+            height: 200px;
+        }
+
+        .parsha-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1a1a1b;
+            color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 2000;
+            border: 2px solid #538d4e;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .parsha-message.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .parsha-message h3 {
+            color: #538d4e;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .parsha-message .hebrew {
+            font-size: 1.2rem;
+            text-align: center;
+            margin: 20px 0;
+            color: #b59f3b;
+            font-weight: 600;
+            line-height: 1.6;
+        }
+
+        .parsha-message .translation {
+            font-style: italic;
+            text-align: center;
+            margin: 15px 0;
+            color: #818384;
+            line-height: 1.5;
+        }
+
+        .parsha-message p {
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .parsha-message .close-btn {
+            background: #538d4e;
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            display: block;
+            margin: 20px auto 0;
+            transition: all 0.2s ease;
+        }
+
+        .parsha-message .close-btn:hover {
+            background: #6aaa64;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>YC WORDLE</h1>
+        <p class="subtitle">Weekly challenge - based on the parsha</p>
+    </div>
+
+    <div class="games-container">
+        <!-- Game 1 -->
+        <div class="game-section">
+            <div class="game-header">
+                <div class="game-title">Part 1</div>
+                <div class="game-clue">Hebrew - 'blessing of'</div>
+            </div>
+            <div class="game-board" id="game-board-1">
+                <!-- Game board 1 will be generated by JavaScript -->
+            </div>
+            <div class="game-status" id="status-1"></div>
+        </div>
+
+        <!-- Game 2 -->
+        <div class="game-section">
+            <div class="game-header">
+                <div class="game-title">Part 2</div>
+                <div class="game-clue">Hebrew - 'the food'</div>
+            </div>
+            <div class="game-board" id="game-board-2">
+                <!-- Game board 2 will be generated by JavaScript -->
+            </div>
+            <div class="game-status" id="status-2"></div>
+        </div>
+    </div>
+
+    <div class="keyboard-spacer"></div>
+
+    <div class="keyboard" id="keyboard">
+        <div class="keyboard-row">
+            <button class="key" data-key="Q">Q</button>
+            <button class="key" data-key="W">W</button>
+            <button class="key" data-key="E">E</button>
+            <button class="key" data-key="R">R</button>
+            <button class="key" data-key="T">T</button>
+            <button class="key" data-key="Y">Y</button>
+            <button class="key" data-key="U">U</button>
+            <button class="key" data-key="I">I</button>
+            <button class="key" data-key="O">O</button>
+            <button class="key" data-key="P">P</button>
+        </div>
+        <div class="keyboard-row">
+            <button class="key" data-key="A">A</button>
+            <button class="key" data-key="S">S</button>
+            <button class="key" data-key="D">D</button>
+            <button class="key" data-key="F">F</button>
+            <button class="key" data-key="G">G</button>
+            <button class="key" data-key="H">H</button>
+            <button class="key" data-key="J">J</button>
+            <button class="key" data-key="K">K</button>
+            <button class="key" data-key="L">L</button>
+        </div>
+        <div class="keyboard-row">
+            <button class="key wide" data-key="ENTER">ENTER</button>
+            <button class="key" data-key="Z">Z</button>
+            <button class="key" data-key="X">X</button>
+            <button class="key" data-key="C">C</button>
+            <button class="key" data-key="V">V</button>
+            <button class="key" data-key="B">B</button>
+            <button class="key" data-key="N">N</button>
+            <button class="key" data-key="M">M</button>
+            <button class="key wide" data-key="BACKSPACE">⌫</button>
+        </div>
+    </div>
+
+    <div class="message" id="message"></div>
+
+    <div class="overlay" id="overlay"></div>
+    <div class="parsha-message" id="parsha-message">
+        <h3>Parshat Eikev - Birkat HaMazon</h3>
+        <p>In this week's parsha—Parshat Eikev, the mitzvah of reciting Birkat HaMazon is commanded in the Torah. The passuk says:</p>
+        
+        <div class="hebrew">
+            "וְאָכַלְתָּ וְשָׂבָעְתָּ, וּבֵרַכְתָּ אֶת-ה' אֱ-לֹקֶיךָ, עַל-הָאָרֶץ הַטּוֹבָה אֲשֶׁר נָתַן-לָּךְ"
+        </div>
+        
+        <div class="translation">
+            "When you have eaten and are satisfied, you shall bless the Lord your God for the good land He has given you."
+        </div>
+        
+        <p>From this passuk, the Gemara (Berakhot 21a) derives the obligation of Birkat HaMazon as a Torah-level commandment (Mitzvat De'oreita). The rabbis unpack the passuk to underline the order and elements of the blessing: the act of eating and being satisfied, followed by blessing God.</p>
+        
+        <p><strong>Shabbat Shalom!</strong></p>
+        
+        <button class="close-btn" onclick="closeParshaMessage()">Close</button>
+    </div>
+
+    <script>
+        // Game configuration
+        const WORDS = {
+            1: 'BIRKAT',
+            2: 'HAMAZON'
+        };
+
+        const WORD_LENGTHS = {
+            1: 6,
+            2: 7
+        };
+
+        // Game states
+        const gameStates = {
+            1: {
+                currentRow: 0,
+                currentCol: 0,
+                gameOver: false,
+                gameWon: false,
+                guesses: []
+            },
+            2: {
+                currentRow: 0,
+                currentCol: 0,
+                gameOver: false,
+                gameWon: false,
+                guesses: []
+            }
+        };
+
+        let activeGame = 1;
+        let keyboardState = {};
+
+        // Initialize games
+        function initGames() {
+            createGameBoard(1);
+            createGameBoard(2);
+            setupKeyboard();
+            updateCurrentBox();
+        }
+
+        // Create game board for a specific game
+        function createGameBoard(gameNum) {
+            const gameBoard = document.getElementById(`game-board-${gameNum}`);
+            gameBoard.innerHTML = '';
+            const wordLength = WORD_LENGTHS[gameNum];
+
+            for (let row = 0; row < 6; row++) {
+                const wordRow = document.createElement('div');
+                wordRow.className = `word-row ${wordLength === 6 ? 'six-letters' : 'seven-letters'}`;
+                wordRow.id = `row-${gameNum}-${row}`;
+
+                for (let col = 0; col < wordLength; col++) {
+                    const letterBox = document.createElement('div');
+                    letterBox.className = 'letter-box';
+                    letterBox.id = `box-${gameNum}-${row}-${col}`;
+                    letterBox.addEventListener('click', () => setActiveGame(gameNum));
+                    wordRow.appendChild(letterBox);
+                }
+
+                gameBoard.appendChild(wordRow);
+            }
+        }
+
+        // Set active game
+        function setActiveGame(gameNum) {
+            if (gameStates[gameNum].gameOver) return;
+            activeGame = gameNum;
+            updateCurrentBox();
+        }
+
+        // Setup keyboard event listeners
+        function setupKeyboard() {
+            // Virtual keyboard
+            document.querySelectorAll('.key').forEach(key => {
+                key.addEventListener('click', () => {
+                    handleKeyPress(key.dataset.key);
+                });
+            });
+
+            // Physical keyboard
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    handleKeyPress('ENTER');
+                } else if (e.key === 'Backspace') {
+                    handleKeyPress('BACKSPACE');
+                } else if (e.key.match(/[a-zA-Z]/)) {
+                    handleKeyPress(e.key.toUpperCase());
+                } else if (e.key >= '1' && e.key <= '2') {
+                    setActiveGame(parseInt(e.key));
+                }
+            });
+        }
+
+        // Handle key press
+        function handleKeyPress(key) {
+            // Find an active game if current one is over
+            if (gameStates[activeGame].gameOver) {
+                for (let i = 1; i <= 2; i++) {
+                    if (!gameStates[i].gameOver) {
+                        activeGame = i;
+                        break;
+                    }
+                }
+                if (gameStates[activeGame].gameOver) return;
+            }
+
+            if (key === 'ENTER') {
+                submitGuess();
+            } else if (key === 'BACKSPACE') {
+                deleteLetter();
+            } else if (key.match(/[A-Z]/) && key.length === 1) {
+                addLetter(key);
+            }
+        }
+
+        // Add letter to current position
+        function addLetter(letter) {
+            const state = gameStates[activeGame];
+            const wordLength = WORD_LENGTHS[activeGame];
+            if (state.currentCol < wordLength) {
+                const box = document.getElementById(`box-${activeGame}-${state.currentRow}-${state.currentCol}`);
+                box.textContent = letter;
+                box.classList.add('filled');
+                state.currentCol++;
+                updateCurrentBox();
+            }
+        }
+
+        // Delete letter from current position
+        function deleteLetter() {
+            const state = gameStates[activeGame];
+            if (state.currentCol > 0) {
+                state.currentCol--;
+                const box = document.getElementById(`box-${activeGame}-${state.currentRow}-${state.currentCol}`);
+                box.textContent = '';
+                box.classList.remove('filled');
+                updateCurrentBox();
+            }
+        }
+
+        // Update current box indicator
+        function updateCurrentBox() {
+            // Remove current class from all boxes
+            document.querySelectorAll('.letter-box').forEach(box => {
+                box.classList.remove('current');
+            });
+
+            // Add current class to current box in active game
+            const state = gameStates[activeGame];
+            const wordLength = WORD_LENGTHS[activeGame];
+            if (state.currentCol < wordLength && state.currentRow < 6 && !state.gameOver) {
+                const currentBox = document.getElementById(`box-${activeGame}-${state.currentRow}-${state.currentCol}`);
+                if (currentBox) {
+                    currentBox.classList.add('current');
+                }
+            }
+        }
+
+        // Submit current guess
+        function submitGuess() {
+            const state = gameStates[activeGame];
+            const wordLength = WORD_LENGTHS[activeGame];
+            if (state.currentCol !== wordLength) {
+                showMessage('Not enough letters');
+                return;
+            }
+
+            const guess = getCurrentGuess();
+            state.guesses.push(guess);
+            checkGuess(guess);
+            
+            if (guess === WORDS[activeGame]) {
+                state.gameWon = true;
+                state.gameOver = true;
+                showMessage('Excellent!');
+                updateGameStatus(activeGame, 'won', `Solved in ${state.currentRow + 1}!`);
+                
+                // Reset keyboard when Part 1 is completed
+                setTimeout(() => {
+                    if (activeGame === 1) {
+                        keyboardState = {};
+                        updateKeyboardDisplay();
+                    }
+                    
+                    // Check if both games are completed
+                    if (gameStates[1].gameOver && gameStates[2].gameOver && 
+                        gameStates[1].gameWon && gameStates[2].gameWon) {
+                        setTimeout(showParshaMessage, 1000);
+                    } else {
+                        // Switch to next available game
+                        for (let i = 1; i <= 2; i++) {
+                            if (!gameStates[i].gameOver) {
+                                setActiveGame(i);
+                                break;
+                            }
+                        }
+                    }
+                }, 1500);
+            } else if (state.currentRow === 5) {
+                state.gameOver = true;
+                showMessage(`The word was ${WORDS[activeGame]}`);
+                updateGameStatus(activeGame, 'lost', `The word was ${WORDS[activeGame]}`);
+                
+                // Reset keyboard when Part 1 is completed (win or lose)
+                setTimeout(() => {
+                    if (activeGame === 1) {
+                        keyboardState = {};
+                        updateKeyboardDisplay();
+                    }
+                    
+                    // Switch to next available game
+                    for (let i = 1; i <= 2; i++) {
+                        if (!gameStates[i].gameOver) {
+                            setActiveGame(i);
+                            break;
+                        }
+                    }
+                }, 1500);
+            } else {
+                state.currentRow++;
+                state.currentCol = 0;
+                updateCurrentBox();
+            }
+        }
+
+        // Get current guess from the active game
+        function getCurrentGuess() {
+            const state = gameStates[activeGame];
+            const wordLength = WORD_LENGTHS[activeGame];
+            let guess = '';
+            for (let col = 0; col < wordLength; col++) {
+                const box = document.getElementById(`box-${activeGame}-${state.currentRow}-${col}`);
+                guess += box.textContent;
+            }
+            return guess;
+        }
+
+        // Check guess against target word
+        function checkGuess(guess) {
+            const state = gameStates[activeGame];
+            const targetWord = WORDS[activeGame];
+            const wordLength = WORD_LENGTHS[activeGame];
+            const wordArray = targetWord.split('');
+            const guessArray = guess.split('');
+            const result = new Array(wordLength).fill('absent');
+
+            // First pass: mark correct letters
+            for (let i = 0; i < wordLength; i++) {
+                if (guessArray[i] === wordArray[i]) {
+                    result[i] = 'correct';
+                    wordArray[i] = null; // Mark as used
+                }
+            }
+
+            // Second pass: mark present letters
+            for (let i = 0; i < wordLength; i++) {
+                if (result[i] === 'absent' && wordArray.includes(guessArray[i])) {
+                    result[i] = 'present';
+                    wordArray[wordArray.indexOf(guessArray[i])] = null; // Mark as used
+                }
+            }
+
+            // Apply results to boxes and update keyboard
+            for (let i = 0; i < wordLength; i++) {
+                const box = document.getElementById(`box-${activeGame}-${state.currentRow}-${i}`);
+                const letter = guessArray[i];
+                
+                setTimeout(() => {
+                    box.classList.add('flip');
+                    setTimeout(() => {
+                        box.classList.add(result[i]);
+                        updateKeyboardState(letter, result[i]);
+                    }, 300);
+                }, i * 100);
+            }
+        }
+
+        // Update keyboard state
+        function updateKeyboardState(letter, result) {
+            const currentState = keyboardState[letter] || 'unused';
+            
+            if (result === 'correct' || 
+                (result === 'present' && currentState !== 'correct') ||
+                (result === 'absent' && currentState === 'unused')) {
+                keyboardState[letter] = result;
+                updateKeyboardDisplay();
+            }
+        }
+
+        // Update keyboard display
+        function updateKeyboardDisplay() {
+            document.querySelectorAll('.key').forEach(key => {
+                const letter = key.dataset.key;
+                if (letter && letter.length === 1) {
+                    const state = keyboardState[letter];
+                    key.className = key.className.replace(/\b(correct|present|absent)\b/g, '');
+                    if (state && state !== 'unused') {
+                        key.classList.add(state);
+                    }
+                }
+            });
+        }
+
+        // Update game status
+        function updateGameStatus(gameNum, status, message) {
+            const statusElement = document.getElementById(`status-${gameNum}`);
+            statusElement.textContent = message;
+            statusElement.className = `game-status ${status}`;
+        }
+
+        // Reset specific game
+        function resetGame(gameNum) {
+            // Reset game state
+            gameStates[gameNum] = {
+                currentRow: 0,
+                currentCol: 0,
+                gameOver: false,
+                gameWon: false,
+                guesses: []
+            };
+
+            const wordLength = WORD_LENGTHS[gameNum];
+
+            // Reset board
+            for (let row = 0; row < 6; row++) {
+                for (let col = 0; col < wordLength; col++) {
+                    const box = document.getElementById(`box-${gameNum}-${row}-${col}`);
+                    box.textContent = '';
+                    box.className = 'letter-box';
+                }
+            }
+
+            // Clear status
+            const statusElement = document.getElementById(`status-${gameNum}`);
+            statusElement.innerHTML = '';
+            statusElement.className = 'game-status';
+
+            // Reset keyboard if both games are reset
+            const allGamesReset = Object.values(gameStates).every(state => 
+                state.currentRow === 0 && state.guesses.length === 0
+            );
+            
+            if (allGamesReset) {
+                keyboardState = {};
+                updateKeyboardDisplay();
+            }
+
+            // Set as active game
+            setActiveGame(gameNum);
+        }
+
+        // Show message to user
+        function showMessage(text) {
+            const message = document.getElementById('message');
+            message.textContent = text;
+            message.classList.add('show');
+            
+            setTimeout(() => {
+                message.classList.remove('show');
+            }, 2000);
+        }
+
+        // Show parsha message
+        function showParshaMessage() {
+            const overlay = document.getElementById('overlay');
+            const parshaMessage = document.getElementById('parsha-message');
+            
+            overlay.classList.add('show');
+            parshaMessage.classList.add('show');
+        }
+
+        // Close parsha message
+        function closeParshaMessage() {
+            const overlay = document.getElementById('overlay');
+            const parshaMessage = document.getElementById('parsha-message');
+            
+            overlay.classList.remove('show');
+            parshaMessage.classList.remove('show');
+        }
+
+        // Close message when clicking overlay
+        document.getElementById('overlay').addEventListener('click', closeParshaMessage);
+
+        // Initialize the games when page loads
+        initGames();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e87874560373f6',t:'MTc1NTA5MDgxNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
